@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metronome</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+        }
+
+        .metronome {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+
+        .tempo-display {
+            font-size: 3rem;
+            text-align: center;
+            margin: 1rem 0;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .tempo-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .tempo-slider {
+            flex: 1;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .start-stop {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.25rem;
+            margin-top: 1rem;
+            background: #28a745;
+        }
+
+        .start-stop:hover {
+            background: #218838;
+        }
+
+        .start-stop.stopped {
+            background: #dc3545;
+        }
+
+        .start-stop.stopped:hover {
+            background: #c82333;
+        }
+
+        .time-signature-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .time-signature-select {
+            padding: 0.5rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background: white;
+            cursor: pointer;
+        }
+
+        /* Previous beat indicator styles remain */
+        .beat-indicators {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .beat-light {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            transition: opacity 0.05s ease-out;
+            opacity: 0.2;
+        }
+
+        .beat-light.accent {
+            background-color: #28a745;
+        }
+
+        .beat-light.regular {
+            background-color: #dc3545;
+        }
+
+        .beat-light.strong {
+            background-color: #ffc107;
+        }
+
+        .beat-light.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="metronome">
+        <div class="tempo-display">120</div>
+        <div class="time-signature-control">
+            <select class="time-signature-select">
+                <option value="1">1/4</option>
+                <option value="2">2/4</option>
+                <option value="3">3/4</option>
+                <option value="4" selected>4/4</option>
+                <option value="5">5/4</option>
+                <option value="6">6/8</option>
+                <option value="7">7/8</option>
+                <option value="9">9/8</option>
+                <option value="12">12/8</option>
+            </select>
+        </div>
+        <div class="beat-indicators">
+            <!-- Beat indicators will be added here dynamically -->
+        </div>
+        <!-- Previous controls remain the same -->
+        <div class="tempo-controls">
+            <div class="button-group">
+                <button class="tempo-minus-5">-5</button>
+                <button class="tempo-minus-1">-1</button>
+            </div>
+            <input type="range" min="40" max="218" value="120" class="tempo-slider">
+            <div class="button-group">
+                <button class="tempo-plus-1">+1</button>
+                <button class="tempo-plus-5">+5</button>
+            </div>
+        </div>
+        <button class="start-stop">Start</button>
+    </div>
+
+    <script>
+        class MetronomeAudio {
+            constructor() {
+                this.audioContext = null;
+                this.nextNoteTime = 0;
+                this.scheduleAheadTime = 0.1;   // How far ahead to schedule audio (seconds)
+                this.lookahead = 25.0;          // How frequently to call scheduling function (milliseconds)
+                this.currentBeat = 0;
+                this.tempo = 120;
+                this.isPlaying = false;
+                this.timerID = null;
+                this.beatCallback = null;
+                this.timeSignature = 4;
+                this.beatPatterns = {
+                    '1': [1],                  // 1/4
+                    '2': [1, 0],               // 2/4
+                    '3': [1, 0, 0],           // 3/4
+                    '4': [1, 0, 0, 0],        // 4/4 
+                    '5': [1, 0, 2, 0, 0],     // 5/4 (1 = strong, 2 = medium, 0 = weak)
+                    '6': [1, 0, 0, 2, 0, 0],  // 6/8
+                    '7': [1, 0, 2, 0, 2, 0, 0], // 7/8
+                    '9': [1, 0, 0, 2, 0, 0, 2, 0, 0], // 9/8
+                    '12': [1, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0] // 12/8
+                };
+            }
+
+            async initialize() {
+                // Create audio context on first user interaction
+                if (!this.audioContext) {
+                    this.audioContext = new AudioContext();
+                    await this.audioContext.resume();
+                }
+            }
+
+            nextNote() {
+                // Calculate time for next note
+                const secondsPerBeat = 60.0 / this.tempo;
+                this.nextNoteTime += secondsPerBeat;
+                this.currentBeat = (this.currentBeat + 1) % this.timeSignature;
+            }
+
+            scheduleNote(beatNumber, time) {
+                // Create oscillator for the click sound
+                const oscillator = this.audioContext.createOscillator();
+                const envelope = this.audioContext.createGain();
+
+                // Get the beat pattern for current time signature
+                const pattern = this.beatPatterns[this.timeSignature];
+                const beatType = pattern[beatNumber];
+
+                // Set frequency based on beat type
+                switch (beatType) {
+                    case 1: // Strong beat
+                        oscillator.frequency.value = 880.0;
+                        break;
+                    case 2: // Medium beat
+                        oscillator.frequency.value = 660.0;
+                        break;
+                    default: // Weak beat
+                        oscillator.frequency.value = 440.0;
+                }
+
+                envelope.gain.value = 1.0;
+                envelope.gain.exponentialRampToValueAtTime(1.0, time + 0.001);
+                envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+
+                oscillator.connect(envelope);
+                envelope.connect(this.audioContext.destination);
+
+                oscillator.start(time);
+                oscillator.stop(time + 0.03);
+
+                this.scheduleVisualUpdate(beatNumber, time);
+            }
+
+            scheduleVisualUpdate(beatNumber, time) {
+                const drawTime = time - this.audioContext.currentTime;
+                setTimeout(() => {
+                    if (this.beatCallback) {
+                        this.beatCallback(beatNumber);
+                    }
+                }, drawTime * 1000);
+            }
+
+            scheduler() {
+                while (this.nextNoteTime < this.audioContext.currentTime + this.scheduleAheadTime) {
+                    this.scheduleNote(this.currentBeat, this.nextNoteTime);
+                    this.nextNote();
+                }
+                this.timerID = window.setTimeout(() => this.scheduler(), this.lookahead);
+            }
+
+            start() {
+                if (this.isPlaying) return;
+
+                this.isPlaying = true;
+                this.currentBeat = this.timeSignature - 1; // So first beat will be 0
+                this.nextNoteTime = this.audioContext.currentTime + 0.05;
+                this.nextNote();
+                this.scheduler();
+            }
+
+            stop() {
+                this.isPlaying = false;
+                window.clearTimeout(this.timerID);
+                if (this.beatCallback) {
+                    this.beatCallback(-1); // Signal to clear all beat indicators
+                }
+            }
+
+            setTempo(newTempo) {
+                this.tempo = Math.min(Math.max(newTempo, 40), 218);
+            }
+
+            setBeatCallback(callback) {
+                this.beatCallback = callback;
+            }
+
+            setTimeSignature(beats) {
+                this.timeSignature = beats;
+                this.currentBeat = 0; // Reset beat counter when changing time signature
+            }
+        }
+
+        class MetronomeUI {
+            constructor(metronomeAudio) {
+                this.audio = metronomeAudio;
+                this.tempoDisplay = document.querySelector('.tempo-display');
+                this.tempoSlider = document.querySelector('.tempo-slider');
+                this.startStopButton = document.querySelector('.start-stop');
+                this.beatIndicators = document.querySelector('.beat-indicators');
+                this.timeSignatureSelect = document.querySelector('.time-signature-select');
+
+                this.setupBeatIndicators();
+                this.setupEventListeners();
+
+                this.audio.setBeatCallback((beatNumber) => this.updateBeatIndicators(beatNumber));
+            }
+
+            setupBeatIndicators() {
+                const pattern = this.audio.beatPatterns[this.audio.timeSignature];
+                this.beatIndicators.innerHTML = '';
+
+                pattern.forEach((beatType, index) => {
+                    const light = document.createElement('div');
+                    light.className = 'beat-light ' + this.getBeatClass(beatType);
+                    this.beatIndicators.appendChild(light);
+                });
+            }
+
+            getBeatClass(beatType) {
+                switch (beatType) {
+                    case 1: return 'accent';    // Strong beat
+                    case 2: return 'strong';    // Medium beat
+                    default: return 'regular';  // Weak beat
+                }
+            }
+
+            updateBeatIndicators(beatNumber) {
+                const lights = this.beatIndicators.querySelectorAll('.beat-light');
+                lights.forEach(light => light.classList.remove('active'));
+
+                if (beatNumber >= 0) {
+                    lights[beatNumber].classList.add('active');
+                }
+            }
+
+            setupEventListeners() {
+                // Initialize audio on first interaction
+                document.body.addEventListener('click', () => {
+                    this.audio.initialize();
+                }, { once: true });
+
+                // Tempo adjustment buttons
+                document.querySelector('.tempo-minus-5').addEventListener('click', () => this.adjustTempo(-5));
+                document.querySelector('.tempo-minus-1').addEventListener('click', () => this.adjustTempo(-1));
+                document.querySelector('.tempo-plus-1').addEventListener('click', () => this.adjustTempo(1));
+                document.querySelector('.tempo-plus-5').addEventListener('click', () => this.adjustTempo(5));
+
+                // Tempo slider
+                this.tempoSlider.addEventListener('input', (e) => {
+                    const newTempo = parseInt(e.target.value);
+                    this.updateTempo(newTempo);
+                });
+
+                // Start/Stop button
+                this.startStopButton.addEventListener('click', () => {
+                    if (this.audio.isPlaying) {
+                        this.audio.stop();
+                        this.startStopButton.textContent = 'Start';
+                        this.startStopButton.classList.remove('stopped');
+                    } else {
+                        this.audio.start();
+                        this.startStopButton.textContent = 'Stop';
+                        this.startStopButton.classList.add('stopped');
+                    }
+                });
+
+                // Time signature change handler
+                this.timeSignatureSelect.addEventListener('change', (e) => {
+                    const wasPlaying = this.audio.isPlaying;
+                    if (wasPlaying) {
+                        this.audio.stop();
+                    }
+
+                    this.audio.setTimeSignature(parseInt(e.target.value));
+                    this.setupBeatIndicators();
+
+                    if (wasPlaying) {
+                        this.audio.start();
+                    }
+                });
+
+            }
+
+            adjustTempo(amount) {
+                const newTempo = parseInt(this.tempoSlider.value) + amount;
+                this.updateTempo(newTempo);
+                this.tempoSlider.value = this.audio.tempo;
+            }
+
+            updateTempo(tempo) {
+                this.audio.setTempo(tempo);
+                this.tempoDisplay.textContent = this.audio.tempo;
+            }
+
+        }
+
+        // Initialize the application
+        const metronomeAudio = new MetronomeAudio();
+        const metronomeUI = new MetronomeUI(metronomeAudio);
+    </script>
+</body>
+
+</html>
