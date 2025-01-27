@@ -2,6 +2,8 @@
 
 A simple yet powerful metronome application to help musicians keep perfect time.
 
+Try it out [here](https://barbowza.github.io/metronome/)
+
 ## ✨ Features
 
 - Adjustable BPM (Beats Per Minute) from 40-208
@@ -21,7 +23,7 @@ A simple yet powerful metronome application to help musicians keep perfect time.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/metronome.git
+git clone https://github.com/barbowza/metronome.git
 ```
 
 
@@ -37,7 +39,6 @@ cd metronome
 1. Set your desired tempo using the BPM slider or number input
 2. Select your time signature
 3. Click the "Start" button to begin
-4. Use the tap tempo button to find the right tempo for your piece
 
 ## 🎨 Customization
 
