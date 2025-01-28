@@ -11,6 +11,7 @@ Try it out [here](https://barbowza.github.io/metronome/)
 - Customizable time signatures
 - Clean, minimalist interface
 - Audio click with adjustable volume
+- TODO Tap tempo
 
 ## 🚀 Getting Started
 
