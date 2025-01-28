@@ -11,6 +11,7 @@ Try it out [here](https://barbowza.github.io/metronome/)
 - Customizable time signatures
 - Clean, minimalist interface
 - Audio click with adjustable volume
+- Noise Gate opener
 - TODO Tap tempo
 
 ## 🚀 Getting Started
@@ -40,6 +41,7 @@ cd metronome
 1. Set your desired tempo using the BPM slider or number input
 2. Select your time signature
 3. Click the "Start" button to begin
+4. If you notice the volume is attenuated at lower BPM try the Noise Gate Activator 😉
 
 ## 🎨 Customization
 
