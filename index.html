@@ -219,8 +219,8 @@
 
     <script>
         class MetronomeAudio {
-            constructor() {
-                this.audioContext = null;
+            constructor(audioContext) {
+                this.audioContext = audioContext;
                 this.nextNoteTime = 0;
                 this.scheduleAheadTime = 0.1;   // How far ahead to schedule audio (seconds)
                 this.lookahead = 25.0;          // How frequently to call scheduling function (milliseconds)
@@ -241,14 +241,6 @@
                     '9': [1, 0, 0, 2, 0, 0, 2, 0, 0], // 9/8
                     '12': [1, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0] // 12/8
                 };
-            }
-
-            async initialize() {
-                // Create audio context on first user interaction
-                if (!this.audioContext) {
-                    this.audioContext = new AudioContext();
-                    await this.audioContext.resume();
-                }
             }
 
             nextNote() {
@@ -391,10 +383,6 @@
             }
 
             setupEventListeners() {
-                // Initialize audio on first interaction
-                document.body.addEventListener('click', () => {
-                    this.audio.initialize();
-                }, { once: true });
 
                 // Tempo adjustment buttons
                 document.querySelector('.tempo-minus-5').addEventListener('click', () => this.adjustTempo(-5));
@@ -448,12 +436,16 @@
                 this.audio.setTempo(tempo);
                 this.tempoDisplay.textContent = this.audio.tempo;
             }
-
         }
 
-        // Initialize the application
-        const metronomeAudio = new MetronomeAudio();
-        const metronomeUI = new MetronomeUI(metronomeAudio);
+        // Browsers require a first interaction before audio can be played
+        document.body.addEventListener('click', () => {
+            // Initialize the application
+            const audioContext = new AudioContext();
+            const metronomeAudio = new MetronomeAudio(audioContext);
+            const metronomeUI = new MetronomeUI(metronomeAudio);
+        }, { once: true });
+
     </script>
 </body>
 
