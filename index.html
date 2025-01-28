@@ -289,6 +289,12 @@
                 oscillator.start(time);
                 oscillator.stop(time + 0.03);
 
+                // Clean up oscillator and envelope nodes after they stop
+                oscillator.onended = () => {
+                    oscillator.disconnect();
+                    envelope.disconnect();
+                };
+
                 this.scheduleVisualUpdate(beatNumber, time);
             }
 
