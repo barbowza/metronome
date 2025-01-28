@@ -218,6 +218,46 @@
     </div>
 
     <script>
+        class NoiseGateActivator {
+            constructor(audioContext) {
+                this.audioContext = audioContext;
+                this.oscillator = null;
+                this.gainNode = null;
+                this.isActive = false;
+            }
+
+            activate() {
+                if (this.isActive) return;
+
+                this.oscillator = this.audioContext.createOscillator();
+                this.oscillator.frequency.setValueAtTime(30, this.audioContext.currentTime);
+                this.gainNode = this.audioContext.createGain();
+                this.gainNode.gain.setValueAtTime(0.001, this.audioContext.currentTime);
+                this.oscillator.connect(this.gainNode);
+                this.gainNode.connect(this.audioContext.destination);
+                this.oscillator.start();
+                this.isActive = true;
+            }
+
+            deactivate() {
+                if (!this.isActive) return;
+
+                this.oscillator.stop();
+                this.oscillator.disconnect();
+                this.oscillator = null;
+                this.isActive = false;
+            }
+
+            toggle(isPlaying) {
+                if (!isPlaying || this.isActive) {
+                    this.deactivate();
+                } else {
+                    this.activate();
+                }
+            }
+        }
+
+
         class MetronomeAudio {
             constructor(audioContext) {
                 this.audioContext = audioContext;
@@ -340,8 +380,9 @@
         }
 
         class MetronomeUI {
-            constructor(metronomeAudio) {
+            constructor(metronomeAudio, noiseGateActivator) {
                 this.audio = metronomeAudio;
+                this.noiseGate = noiseGateActivator;
                 this.tempoDisplay = document.querySelector('.tempo-display');
                 this.tempoSlider = document.querySelector('.tempo-slider');
                 this.startStopButton = document.querySelector('.start-stop');
@@ -390,6 +431,10 @@
                 document.querySelector('.tempo-plus-1').addEventListener('click', () => this.adjustTempo(1));
                 document.querySelector('.tempo-plus-5').addEventListener('click', () => this.adjustTempo(5));
 
+                document.querySelector('.noise-gate-checkbox').addEventListener('change', () => {
+                    this.noiseGate.toggle(this.audio.isPlaying);
+                });
+
                 // Tempo slider
                 this.tempoSlider.addEventListener('input', (e) => {
                     const newTempo = parseInt(e.target.value);
@@ -400,10 +445,14 @@
                 this.startStopButton.addEventListener('click', () => {
                     if (this.audio.isPlaying) {
                         this.audio.stop();
+                        this.noiseGate.deactivate();
                         this.startStopButton.textContent = 'Start';
                         this.startStopButton.classList.remove('stopped');
                     } else {
                         this.audio.start();
+                        if (document.querySelector('.noise-gate-checkbox').checked) {
+                            this.noiseGate.activate();
+                        }
                         this.startStopButton.textContent = 'Stop';
                         this.startStopButton.classList.add('stopped');
                     }
@@ -442,8 +491,9 @@
         document.body.addEventListener('click', () => {
             // Initialize the application
             const audioContext = new AudioContext();
+            const noiseGateActivator = new NoiseGateActivator(audioContext);
             const metronomeAudio = new MetronomeAudio(audioContext);
-            const metronomeUI = new MetronomeUI(metronomeAudio);
+            const metronomeUI = new MetronomeUI(metronomeAudio, noiseGateActivator);
         }, { once: true });
 
     </script>
