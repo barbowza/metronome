@@ -131,6 +131,48 @@
         .beat-light.active {
             opacity: 1;
         }
+
+        .noise-gate-control {
+            display: flex;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .noise-gate-checkbox {
+            margin-right: 0.5rem;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            accent-color: #333;
+            vertical-align: middle;
+        }
+
+        .tooltip {
+            display: inline-block;
+            margin-left: 0.1rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: "If your signal chain includes a noise gate it can be kept open with this inaudible tone";
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -166,12 +208,59 @@
             </div>
         </div>
         <button class="start-stop">Start</button>
+        <div class="noise-gate-control">
+            <label>
+                <input type="checkbox" class="noise-gate-checkbox">
+                Open Noise Gate
+                <span class="tooltip">(?)</span>
+            </label>
+        </div>
     </div>
 
     <script>
+        class NoiseGateActivator {
+            constructor(audioContext) {
+                this.audioContext = audioContext;
+                this.oscillator = null;
+                this.gainNode = null;
+                this.isActive = false;
+            }
+
+            activate() {
+                if (this.isActive) return;
+
+                this.oscillator = this.audioContext.createOscillator();
+                this.oscillator.frequency.setValueAtTime(30, this.audioContext.currentTime);
+                this.gainNode = this.audioContext.createGain();
+                this.gainNode.gain.setValueAtTime(0.001, this.audioContext.currentTime);
+                this.oscillator.connect(this.gainNode);
+                this.gainNode.connect(this.audioContext.destination);
+                this.oscillator.start();
+                this.isActive = true;
+            }
+
+            deactivate() {
+                if (!this.isActive) return;
+
+                this.oscillator.stop();
+                this.oscillator.disconnect();
+                this.oscillator = null;
+                this.isActive = false;
+            }
+
+            toggle(isPlaying) {
+                if (!isPlaying || this.isActive) {
+                    this.deactivate();
+                } else {
+                    this.activate();
+                }
+            }
+        }
+
+
         class MetronomeAudio {
-            constructor() {
-                this.audioContext = null;
+            constructor(audioContext) {
+                this.audioContext = audioContext;
                 this.nextNoteTime = 0;
                 this.scheduleAheadTime = 0.1;   // How far ahead to schedule audio (seconds)
                 this.lookahead = 25.0;          // How frequently to call scheduling function (milliseconds)
@@ -192,14 +281,6 @@
                     '9': [1, 0, 0, 2, 0, 0, 2, 0, 0], // 9/8
                     '12': [1, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0] // 12/8
                 };
-            }
-
-            async initialize() {
-                // Create audio context on first user interaction
-                if (!this.audioContext) {
-                    this.audioContext = new AudioContext();
-                    await this.audioContext.resume();
-                }
             }
 
             nextNote() {
@@ -239,6 +320,12 @@
 
                 oscillator.start(time);
                 oscillator.stop(time + 0.03);
+
+                // Clean up oscillator and envelope nodes after they stop
+                oscillator.onended = () => {
+                    oscillator.disconnect();
+                    envelope.disconnect();
+                };
 
                 this.scheduleVisualUpdate(beatNumber, time);
             }
@@ -293,8 +380,9 @@
         }
 
         class MetronomeUI {
-            constructor(metronomeAudio) {
+            constructor(metronomeAudio, noiseGateActivator) {
                 this.audio = metronomeAudio;
+                this.noiseGate = noiseGateActivator;
                 this.tempoDisplay = document.querySelector('.tempo-display');
                 this.tempoSlider = document.querySelector('.tempo-slider');
                 this.startStopButton = document.querySelector('.start-stop');
@@ -336,16 +424,16 @@
             }
 
             setupEventListeners() {
-                // Initialize audio on first interaction
-                document.body.addEventListener('click', () => {
-                    this.audio.initialize();
-                }, { once: true });
 
                 // Tempo adjustment buttons
                 document.querySelector('.tempo-minus-5').addEventListener('click', () => this.adjustTempo(-5));
                 document.querySelector('.tempo-minus-1').addEventListener('click', () => this.adjustTempo(-1));
                 document.querySelector('.tempo-plus-1').addEventListener('click', () => this.adjustTempo(1));
                 document.querySelector('.tempo-plus-5').addEventListener('click', () => this.adjustTempo(5));
+
+                document.querySelector('.noise-gate-checkbox').addEventListener('change', () => {
+                    this.noiseGate.toggle(this.audio.isPlaying);
+                });
 
                 // Tempo slider
                 this.tempoSlider.addEventListener('input', (e) => {
@@ -357,10 +445,14 @@
                 this.startStopButton.addEventListener('click', () => {
                     if (this.audio.isPlaying) {
                         this.audio.stop();
+                        this.noiseGate.deactivate();
                         this.startStopButton.textContent = 'Start';
                         this.startStopButton.classList.remove('stopped');
                     } else {
                         this.audio.start();
+                        if (document.querySelector('.noise-gate-checkbox').checked) {
+                            this.noiseGate.activate();
+                        }
                         this.startStopButton.textContent = 'Stop';
                         this.startStopButton.classList.add('stopped');
                     }
@@ -393,12 +485,17 @@
                 this.audio.setTempo(tempo);
                 this.tempoDisplay.textContent = this.audio.tempo;
             }
-
         }
 
-        // Initialize the application
-        const metronomeAudio = new MetronomeAudio();
-        const metronomeUI = new MetronomeUI(metronomeAudio);
+        // Browsers require a first interaction before audio can be played
+        document.body.addEventListener('click', () => {
+            // Initialize the application
+            const audioContext = new AudioContext();
+            const noiseGateActivator = new NoiseGateActivator(audioContext);
+            const metronomeAudio = new MetronomeAudio(audioContext);
+            const metronomeUI = new MetronomeUI(metronomeAudio, noiseGateActivator);
+        }, { once: true });
+
     </script>
 </body>
 
