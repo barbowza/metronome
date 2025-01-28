@@ -131,6 +131,48 @@
         .beat-light.active {
             opacity: 1;
         }
+
+        .noise-gate-control {
+            display: flex;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .noise-gate-checkbox {
+            margin-right: 0.5rem;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            accent-color: #333;
+            vertical-align: middle;
+        }
+
+        .tooltip {
+            display: inline-block;
+            margin-left: 0.1rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: "If your signal chain includes a noise gate it can be kept open with this inaudible tone";
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -166,6 +208,13 @@
             </div>
         </div>
         <button class="start-stop">Start</button>
+        <div class="noise-gate-control">
+            <label>
+                <input type="checkbox" class="noise-gate-checkbox">
+                Open Noise Gate
+                <span class="tooltip">(?)</span>
+            </label>
+        </div>
     </div>
 
     <script>
