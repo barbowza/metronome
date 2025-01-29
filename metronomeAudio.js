@@ -91,9 +91,8 @@ class MetronomeAudio {
         if (this.isPlaying) return;
 
         this.isPlaying = true;
-        this.currentBeat = this.timeSignature - 1; // So first beat will be 0
-        this.nextNoteTime = this.audioContext.currentTime + 0.05;
-        this.nextNote();
+        this.currentBeat = 0;
+        this.nextNoteTime = this.audioContext.currentTime;
         this.scheduler();
     }
 
