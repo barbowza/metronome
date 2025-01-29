@@ -250,7 +250,7 @@
             }
 
             setupBeatIndicators() {
-                const pattern = this.audio.beatPatterns[this.audio.timeSignature];
+                const pattern = this.audio.beatPatterns[this.audio.timeSignatureBeats];
                 this.beatIndicators.innerHTML = '';
 
                 pattern.forEach((beatType, index) => {
@@ -319,7 +319,7 @@
                         this.audio.stop();
                     }
 
-                    this.audio.setTimeSignature(parseInt(e.target.value));
+                    this.audio.setTimeSignature(e.target.value);
                     this.setupBeatIndicators();
 
                     if (wasPlaying) {
