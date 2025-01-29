@@ -222,7 +222,8 @@
             </label>
         </div>
     </div>
-
+    <div id="click-interceptor" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;">
+    </div>
     <script type="module">
         import NoiseGateActivator from './noiseGateActivator.js';
         import MetronomeAudio from './metronomeAudio.js';
@@ -354,12 +355,23 @@
                 });
             }
 
+
+            /**
+             * Adjusts the tempo of the metronome by a specified amount.
+             * @function adjustTempo
+             * @param {number} amount - The amount by which to adjust the tempo.
+             */
             adjustTempo(amount) {
                 const newTempo = parseInt(this.tempoSlider.value) + amount;
                 this.updateTempo(newTempo);
                 this.tempoSlider.value = this.audio.tempo;
             }
 
+            /**
+             * Updates the tempo of the audio and displays the new tempo.
+             * @function updateTempo
+             * @param {number} tempo - The new tempo value to set.
+             */
             updateTempo(tempo) {
                 this.audio.setTempo(tempo);
                 this.tempoDisplay.textContent = this.audio.tempo;
@@ -371,7 +383,9 @@
         tempoSlider.max = MetronomeAudio.MAX_TEMPO;
 
         // Browsers require a first interaction before audio can be played
-        document.body.addEventListener('click', () => {
+        document.getElementById('click-interceptor').addEventListener('click', () => {
+            document.getElementById('click-interceptor').remove();
+
             // Initialize the application
             const audioContext = new AudioContext();
             const noiseGateActivator = new NoiseGateActivator(audioContext);
