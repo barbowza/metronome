@@ -173,6 +173,11 @@
         .tooltip:hover::after {
             opacity: 1;
         }
+
+        .audio-permission {
+            font-size: 1.75rem;
+            color: rgb(175, 8, 173);
+        }
     </style>
 </head>
 
@@ -180,7 +185,7 @@
     <div class="metronome">
         <div class="tempo-display">120</div>
         <div class="time-signature-control">
-            <select class="time-signature-select"> 
+            <select class="time-signature-select">
                 <option value="1">1/4</option>
                 <option value="2">2/4</option>
                 <option value="3">3/4</option>
@@ -194,6 +199,7 @@
         </div>
         <div class="beat-indicators">
             <!-- Beat indicators will be added here dynamically -->
+            <span class="audio-permission">Click to permit Audio</span>
         </div>
         <!-- Previous controls remain the same -->
         <div class="tempo-controls">
@@ -201,7 +207,7 @@
                 <button class="tempo-minus-5">-5</button>
                 <button class="tempo-minus-1">-1</button>
             </div>
-            <input type="range" min="40" max="218" value="120" class="tempo-slider">
+            <input type="range" min="30" max="300" value="120" class="tempo-slider">
             <div class="button-group">
                 <button class="tempo-plus-1">+1</button>
                 <button class="tempo-plus-5">+5</button>
@@ -359,6 +365,10 @@
                 this.tempoDisplay.textContent = this.audio.tempo;
             }
         }
+
+        const tempoSlider = document.querySelector('.tempo-slider');
+        tempoSlider.min = MetronomeAudio.MIN_TEMPO;
+        tempoSlider.max = MetronomeAudio.MAX_TEMPO;
 
         // Browsers require a first interaction before audio can be played
         document.body.addEventListener('click', () => {

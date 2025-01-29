@@ -1,4 +1,8 @@
 class MetronomeAudio {
+
+    static MIN_TEMPO = 30;
+    static MAX_TEMPO = 300;
+
     constructor(audioContext) {
         this.audioContext = audioContext;
         this.nextNoteTime = 0;
@@ -104,8 +108,15 @@ class MetronomeAudio {
         }
     }
 
+    /**
+     * Sets the tempo to a new value within the allowed range.
+     *
+     * @param {number} newTempo - The new tempo value to set.
+     * @returns {number} The updated tempo value.
+     */
     setTempo(newTempo) {
-        this.tempo = Math.min(Math.max(newTempo, 40), 218);
+        this.tempo = Math.min(Math.max(newTempo, MetronomeAudio.MIN_TEMPO), MetronomeAudio.MAX_TEMPO);
+        return this.tempo;
     }
 
     setBeatCallback(callback) {
