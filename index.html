@@ -155,7 +155,7 @@
         }
 
         .tooltip::after {
-            content: "If your signal chain includes a noise gate it can be kept open with this inaudible tone";
+            content: "If your signal chain includes a noise gate it can be kept open with this inaudible tone. Toggle with `N`";
             position: absolute;
             bottom: 100%;
             left: 50%;
@@ -180,7 +180,7 @@
     <div class="metronome">
         <div class="tempo-display">120</div>
         <div class="time-signature-control">
-            <select class="time-signature-select">
+            <select class="time-signature-select"> 
                 <option value="1">1/4</option>
                 <option value="2">2/4</option>
                 <option value="3">3/4</option>
@@ -230,9 +230,14 @@
                 this.startStopButton = document.querySelector('.start-stop');
                 this.beatIndicators = document.querySelector('.beat-indicators');
                 this.timeSignatureSelect = document.querySelector('.time-signature-select');
-
+                this.tempoMinus1Button = document.querySelector('.tempo-minus-1');
+                this.tempoPlus1Button = document.querySelector('.tempo-plus-1');
+                this.tempoMinus5Button = document.querySelector('.tempo-minus-5');
+                this.tempoPlus5Button = document.querySelector('.tempo-plus-5');
+                this.noiseGateCheckbox = document.querySelector('.noise-gate-checkbox');
                 this.setupBeatIndicators();
                 this.setupEventListeners();
+                this.setupKeyboardShortcuts();
 
                 this.audio.setBeatCallback((beatNumber) => this.updateBeatIndicators(beatNumber));
             }
@@ -315,6 +320,32 @@
                     }
                 });
 
+            }
+
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        this.startStopButton.click();
+                    } else if (e.code === 'ArrowLeft') {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            this.tempoMinus5Button.click();
+                        } else {
+                            this.tempoMinus1Button.click();
+                        }
+                    } else if (e.code === 'ArrowRight') {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            this.tempoPlus5Button.click();
+                        } else {
+                            this.tempoPlus1Button.click();
+                        }
+                    } else if (e.code === 'KeyN') {
+                        e.preventDefault();
+                        this.noiseGateCheckbox.click();
+                    }
+                });
             }
 
             adjustTempo(amount) {
