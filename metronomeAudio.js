@@ -13,17 +13,23 @@ class MetronomeAudio {
         this.isPlaying = false;
         this.timerID = null;
         this.beatCallback = null;
-        this.timeSignature = 4;
+        this.timeSignatureId = '4';    // Default time signature
+        this.timeSignatureBeats = 4;    // Number of beats in this time signature
         this.beatPatterns = {
             '1': [1],                  // 1/4
             '2': [1, 0],               // 2/4
             '3': [1, 0, 0],           // 3/4
             '4': [1, 0, 0, 0],        // 4/4 
-            '5': [1, 0, 2, 0, 0],     // 5/4 (1 = strong, 2 = medium, 0 = weak)
-            '6': [1, 0, 0, 2, 0, 0],  // 6/8
-            '7': [1, 0, 2, 0, 2, 0, 0], // 7/8
-            '9': [1, 0, 0, 2, 0, 0, 2, 0, 0], // 9/8
-            '12': [1, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0] // 12/8
+            '5': [1, 0, 0, 0, 0],     // 5/4
+            '5S': [1, 0, 2, 0, 0],     // 5/4 (1 = strong, 2 = medium, 0 = weak)
+            '6': [1, 0, 0, 0, 0, 0],  // 6/8
+            '6S': [1, 0, 0, 2, 0, 0],  // 6/8 (1 = strong, 2 = medium, 0 = weak)
+            '7': [1, 0, 0, 0, 0, 0, 0], // 7/8
+            '7S': [1, 0, 2, 0, 2, 0, 0], // 7/8 (1 = strong, 2 = medium, 0 = weak)
+            '9': [1, 0, 0, 0, 0, 0, 0, 0, 0], // 9/8
+            '9S': [1, 0, 0, 2, 0, 0, 2, 0, 0], // 9/8
+            '12': [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 12/8
+            '12S': [1, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0] // 12/8
         };
     }
 
@@ -31,7 +37,7 @@ class MetronomeAudio {
         // Calculate time for next note
         const secondsPerBeat = 60.0 / this.tempo;
         this.nextNoteTime += secondsPerBeat;
-        this.currentBeat = (this.currentBeat + 1) % this.timeSignature;
+        this.currentBeat = (this.currentBeat + 1) % this.timeSignatureBeats;
     }
 
     scheduleNote(beatNumber, time) {
@@ -40,7 +46,7 @@ class MetronomeAudio {
         const envelope = this.audioContext.createGain();
 
         // Get the beat pattern for current time signature
-        const pattern = this.beatPatterns[this.timeSignature];
+        const pattern = this.beatPatterns[this.timeSignatureId];
         const beatType = pattern[beatNumber];
 
         // Set frequency based on beat type
@@ -123,9 +129,13 @@ class MetronomeAudio {
         this.beatCallback = callback;
     }
 
-    setTimeSignature(beats) {
-        this.timeSignature = beats;
-        this.currentBeat = 0; // Reset beat counter when changing time signature
+    setTimeSignature(timeSignatureId) {
+        if (this.timeSignatureId === timeSignatureId) return;
+        if (this.beatPatterns[timeSignatureId]) {
+            this.timeSignatureId = timeSignatureId;
+            this.timeSignatureBeats = this.beatPatterns[timeSignatureId].length;
+            this.currentBeat = 0; // Reset beat counter when changing time signature
+        }
     }
 }
 

@@ -191,10 +191,15 @@
                 <option value="3">3/4</option>
                 <option value="4" selected>4/4</option>
                 <option value="5">5/4</option>
+                <option value="5S">5/4 + subbeat</option>
                 <option value="6">6/8</option>
+                <option value="6S">6/8 + subbeat</option>
                 <option value="7">7/8</option>
+                <option value="7S">7/8 + subbeat</option>
                 <option value="9">9/8</option>
+                <option value="9S">9/8 + subbeat</option>
                 <option value="12">12/8</option>
+                <option value="12S">12/8 + subbeat</option>
             </select>
         </div>
         <div class="beat-indicators">
@@ -250,7 +255,7 @@
             }
 
             setupBeatIndicators() {
-                const pattern = this.audio.beatPatterns[this.audio.timeSignature];
+                const pattern = this.audio.beatPatterns[this.audio.timeSignatureId];
                 this.beatIndicators.innerHTML = '';
 
                 pattern.forEach((beatType, index) => {
@@ -319,7 +324,7 @@
                         this.audio.stop();
                     }
 
-                    this.audio.setTimeSignature(parseInt(e.target.value));
+                    this.audio.setTimeSignature(e.target.value);
                     this.setupBeatIndicators();
 
                     if (wasPlaying) {
